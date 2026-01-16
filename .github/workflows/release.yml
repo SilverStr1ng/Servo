@@ -29,10 +29,11 @@ jobs:
       - name: Build Win
         run: pnpm --filter fbx-converter build:win
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 自动上传到 GitHub Release
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: windows-setup
-          path: apps/fbx-converter/dist/*.exe
+          files: apps/fbx-converter/dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

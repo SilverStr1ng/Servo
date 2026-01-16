@@ -46,7 +46,14 @@
 
 ---
 
-## 🕊️ 愿景
+## � 发布与分发
+
+- **GitHub Releases**: 每当推送以 `v` 开头的标签（如 `git tag v1.0.0 && git push origin v1.0.0`）时，GitHub Actions 会自动编译并发布 Windows 安装程序。
+- **GitHub Packages**: 核心逻辑包 `@silverstr1ng/servo-core` 托管于 GitHub Packages，可作为 NPM 模块引用。
+
+---
+
+## �🕊️ 愿景
 
 **Simplify workflows and save time.**
 专注于解决工作流中的琐碎环节，让效率回归本质。

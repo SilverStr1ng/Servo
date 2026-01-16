@@ -1,7 +1,15 @@
 {
-  "name": "@repo/converter-core",
+  "name": "@silverstr1ng/servo-core",
   "version": "1.0.0",
-  "private": true,
+  "private": false,
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:SilverStr1ng/Servo.git",
+    "directory": "packages/converter-core"
+  },
   "type": "module",
   "main": "./src/index.ts",
   "scripts": {
