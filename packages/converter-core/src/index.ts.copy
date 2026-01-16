@@ -1,0 +1,138 @@
+﻿import { spawn } from 'child_process';
+
+export interface DracoOptions {
+  method?: 'edgebreaker' | 'sequential';
+  compressionLevel?: number;
+  quantizePositionBits?: number;
+  quantizeNormalBits?: number;
+  quantizeTexcoordBits?: number;
+  quantizeColorBits?: number;
+  quantizeGenericBits?: number;
+}
+
+export interface Ktx2Options {
+  mode?: 'etc1s' | 'uastc';
+  quality?: number; // 1-5 for UASTC, 1-255 for ETC1S (higher is better for ETC1S, lower is better for UASTC? No, usually quality 1-100 or 1-5)
+  compression?: number; // 0-5
+  powerOfTwo?: boolean;
+}
+
+export interface OptimizeOptions {
+  draco?: boolean;
+  dracoOptions?: DracoOptions;
+  meshopt?: boolean;
+  ktx2?: boolean;
+  ktx2Options?: Ktx2Options;
+}
+
+export async function convertFbxToGlb(
+  fbx2gltfPath: string,
+  inputPath: string,
+  outputPath: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(fbx2gltfPath, ['-i', inputPath, '-o', outputPath, '--binary']);
+    
+    child.on('error', (err) => reject(new Error(`Failed to start fbx2gltf at ${fbx2gltfPath}: ${err.message}`)));
+    child.on('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`fbx2gltf exited with code ${code}`));
+    });
+  });
+}
+
+export async function optimizeGlb(
+  inputBuffer: Buffer,
+  options: OptimizeOptions,
+  toktxPath?: string
+): Promise<Uint8Array> {
+  try {
+    const { WebIO } = await import('@gltf-transform/core');
+    const { draco, meshopt, textureCompress } = await import('@gltf-transform/functions');
+    const { KHRMeshQuantization, KHRDracoMeshCompression, KHRTextureBasisu } = await import('@gltf-transform/extensions');
+    const draco3d = await import('draco3dgltf');
+    const { MeshoptEncoder } = await import('meshoptimizer');
+    const { default: sharp } = await import('sharp');
+    const { writeFileSync, readFileSync, unlinkSync, existsSync } = await import('fs');
+    const { join } = await import('path');
+    const { tmpdir } = await import('os');
+    const { execSync } = await import('child_process');
+
+    const io = new WebIO().registerExtensions([KHRMeshQuantization, KHRDracoMeshCompression, KHRTextureBasisu]);
+    const doc = await io.readBinary(inputBuffer);
+    const transforms = [];
+
+    if (options.draco) {
+      // @ts-ignore
+      const dracoEncoder = await (draco3d.createEncoderModule ? draco3d.createEncoderModule() : draco3d.default?.createEncoderModule());
+      // @ts-ignore
+      const dracoDecoder = await (draco3d.createDecoderModule ? draco3d.createDecoderModule() : draco3d.default?.createDecoderModule());
+      if (dracoEncoder && dracoDecoder) {
+        transforms.push(draco({
+          encoder: dracoEncoder,
+          decoder: dracoDecoder,
+          ...options.dracoOptions
+        }));
+      }
+    }
+
+    if (options.meshopt) {
+      await MeshoptEncoder.ready;
+      transforms.push(meshopt({ encoder: MeshoptEncoder }));
+    }
+
+    if (options.ktx2) {
+      transforms.push(textureCompress({
+        targetFormat: 'ktx2',
+        // @ts-ignore
+        encoder: (buffer, _, texture) => {
+          if (!toktxPath) {
+            console.warn('toktxPath not provided, skipping KTX2 compression for a texture');
+            return buffer;
+          }
+          
+          const mimeType = texture.getMimeType();
+          // 濡傛灉绾圭悊宸茬粡鏄?ktx2锛屾垨鑰呬笉鏄垜浠凡鐭ョ殑鍙浆鎹㈡牸寮忥紝鐩存帴杩斿洖
+          if (mimeType === 'image/ktx2') return buffer;
+
+          const timestamp = Date.now() + Math.random();
+          const tmpIn = join(tmpdir(), `ktx2_in_${timestamp}.png`);
+          const tmpOut = join(tmpdir(), `ktx2_out_${timestamp}.ktx2`);
+          
+          try {
+            // 鍦ㄨ皟鐢?toktx 涔嬪墠锛屽厛纭繚杈撳叆鏄?png
+            // 鍥犱负 FBX 瀵煎嚭鐨勫彲鑳芥槸 tga/tiff 绛夋牸寮忥紝toktx 涓嶄竴瀹氭敮鎸?
+            writeFileSync(tmpIn, buffer);
+            const mode = options.ktx2Options?.mode === 'uastc' ? '--uastc' : '--etc1s';
+            // 澧炲姞 --pwr2 閫夐」锛堝鏋滈渶瑕侊級
+            const pwr2 = options.ktx2Options?.powerOfTwo ? '--pwr2' : '';
+            const cmd = `"${toktxPath}" ${mode} ${pwr2} --genmipmap "${tmpOut}" "${tmpIn}"`;
+            execSync(cmd, { stdio: 'ignore' });
+            return readFileSync(tmpOut);
+          } catch (e) {
+            console.error('toktx failed:', e);
+            return buffer;
+          } finally {
+            try { if (existsSync(tmpIn)) unlinkSync(tmpIn); } catch {}
+            try { if (existsSync(tmpOut)) unlinkSync(tmpOut); } catch {}
+          }
+        }
+      }));
+    }
+
+    if (transforms.length > 0) {
+      // @ts-ignore
+      await doc.transform(...transforms);
+    }
+
+    return await io.writeBinary(doc);
+  } catch (err) {
+    console.error('Optimization failed, returning original buffer:', err);
+    return new Uint8Array(inputBuffer);
+  }
+}
+
+
+
+
+

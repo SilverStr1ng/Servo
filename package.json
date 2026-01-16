@@ -1,0 +1,8 @@
+{
+  "name": "tools-monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --filter fbx-converter dev",
+    "build": "pnpm -r build"
+  }
+}
