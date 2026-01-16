@@ -7,7 +7,7 @@ export default defineConfig({
   main: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@repo/converter-core']
+        exclude: ['@silverstr1ng/servo-core']
       }),
       viteStaticCopy({
         targets: [

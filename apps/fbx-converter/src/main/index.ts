@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { convertFbxToGlb, optimizeGlb } from '@repo/converter-core'
+import { convertFbxToGlb, optimizeGlb } from '@silverstr1ng/servo-core'
 import fs from 'fs/promises'
 
 // Set unique userData path for dev to avoid cache lock issues

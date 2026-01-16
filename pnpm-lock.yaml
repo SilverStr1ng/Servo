@@ -16,7 +16,7 @@ importers:
       '@electron-toolkit/utils':
         specifier: ^3.0.0
         version: 3.0.0(electron@28.3.3)
-      '@repo/converter-core':
+      '@silverstr1ng/servo-core':
         specifier: workspace:*
         version: link:../../packages/converter-core
       clsx:
