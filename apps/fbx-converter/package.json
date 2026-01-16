@@ -4,6 +4,10 @@
   "description": "FBX to GLB converter with optimization",
   "main": "./out/main/index.js",
   "author": "GitHub Copilot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SilverStr1ng/Servo.git"
+  },
   "type": "module",
   "scripts": {
     "format": "prettier --write .",
